@@ -20,8 +20,8 @@
 &mmv {
     delay-ms = <20>;
     trigger-period-ms = <5>;
-    time-to-max-speed-ms = <500>;
-    acceleration-exponent = <2>;
+    time-to-max-speed-ms = <400>;
+    acceleration-exponent = <1>;
 };
 
 //mouse scroll
@@ -65,11 +65,6 @@
 / {
     combos {
         compatible = "zmk,combos";
-
-        ZenkakuHankaku {
-            bindings = <&kp GRAVE>;
-            key-positions = <11 12>;
-        };
 
         DeleteKey {
             bindings = <&kp DEL>;
