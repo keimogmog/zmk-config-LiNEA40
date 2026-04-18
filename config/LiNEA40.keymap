@@ -96,14 +96,9 @@
             key-positions = <26 27>;
         };
 
-        cmd+space {
-            bindings = <&kp LG(SPACE)>;
-            key-positions = <>;
-        };
-
         missionControl {
             bindings = <&kp F3>;
-            key-positions = <12 13 11>;
+            key-positions = <11 12 13>;
             layers = <0>;
         };
     };
