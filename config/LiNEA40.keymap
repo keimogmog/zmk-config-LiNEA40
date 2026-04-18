@@ -96,11 +96,6 @@
             key-positions = <26 27>;
         };
 
-        missionControl {
-            bindings = <&kp F3>;
-            key-positions = <12 13>;
-            layers = <0>;
-        };
     };
 
     behaviors {
