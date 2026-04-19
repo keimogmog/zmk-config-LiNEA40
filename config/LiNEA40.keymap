@@ -28,8 +28,8 @@
 
 &msc {
     delay-ms = <0>;
-    trigger-period-ms = <1>;
-    time-to-max-speed-ms = <100>;
+    trigger-period-ms = <0>;
+    time-to-max-speed-ms = <200>;
     acceleration-exponent = <0>;
 };
 
