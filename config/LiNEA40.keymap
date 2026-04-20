@@ -18,10 +18,10 @@
 //mouse cursol
 
 &mmv {
-    delay-ms = <20>;
-    trigger-period-ms = <5>;
-    time-to-max-speed-ms = <300>;
-    acceleration-exponent = <1>;
+    delay-ms = <10>;
+    trigger-period-ms = <8>;
+    time-to-max-speed-ms = <700>;
+    acceleration-exponent = <2>;
 };
 
 //mouse scroll
