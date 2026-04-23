@@ -62,5 +62,5 @@
 &trackball_listener {
     status = "okay";
     device = <&trackball>;
-    input-processors = <&zip_temp_layer 10 700>;
+    input-processors = <&zip_temp_layer 10 1000>;
 };
