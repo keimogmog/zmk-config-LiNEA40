@@ -57,7 +57,7 @@
         layers = <SCROLL>;
         input-processors =
             <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
-            //スクロール方向を逆転,,,,,,,,,,,,,,,,,,,,,,,,,,
+            //スクロール方向を逆転,,,,,,,,,,,,,,,,,,,,,,,,,,,
             <&zip_xy_to_scroll_mapper>;
     };
 };
@@ -65,16 +65,6 @@
 / {
     combos {
         compatible = "zmk,combos";
-
-        DeleteKey {
-            bindings = <&kp DEL>;
-            key-positions = <7 8>;
-        };
-
-        InsertKey {
-            bindings = <&kp INS>;
-            key-positions = <6 7>;
-        };
 
         CenterClick {
             bindings = <&mkp MB3>;
@@ -117,6 +107,12 @@
         ctrlleft {
             bindings = <&kp LC(LEFT)>;
             key-positions = <2 1>;
+            layers = <0>;
+        };
+
+        lounchpad {
+            bindings = <&kp LC(LG(UP_ARROW))>;
+            key-positions = <11 12 13 34>;
             layers = <0>;
         };
     };
