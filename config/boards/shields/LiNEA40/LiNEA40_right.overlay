@@ -57,19 +57,14 @@
         reg = <0>;
         spi-max-frequency = <2000000>;
         irq-gpios = <&xiao_d 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>; //MOT-D6
+        automouse-layer = <10>;
         snipe-layers = <2>;
         scroll-layers = <5>;
         //scroll-layers = <4 5 6>;
     };
-
-
-/* ここにオートマウス設定を集約 */
-&trackball_listener {
-    status = "okay";
-    device = <&trackball>;
-    input-processors = <&zip_temp_layer 10 1000>;
 };
 
-&zip_temp_layer {
-    excluded-positions = <16 17 18>; 
+&trackball_listener {
+    status = "okay";
+    device = <&trackball>;
 };
