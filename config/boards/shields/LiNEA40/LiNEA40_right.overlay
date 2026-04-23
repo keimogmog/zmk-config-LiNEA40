@@ -1,6 +1,4 @@
 #include "LiNEA40.dtsi"
-
-/* もしこれでエラーが出るなら、この include 行を消して試してください */
 #include <input/processors.dtsi>
 
 &default_transform {
@@ -56,7 +54,7 @@
     };
 };
 
-/* 重複を避けるため、最後にひとつにまとめます */
+/* ここにオートマウス設定を集約 */
 &trackball_listener {
     status = "okay";
     device = <&trackball>;
