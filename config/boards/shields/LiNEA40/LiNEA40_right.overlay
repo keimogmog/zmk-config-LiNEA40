@@ -61,12 +61,6 @@
         scroll-layers = <5>;
         //scroll-layers = <4 5 6>;
     };
-};
-
-&trackball_listener {
-    status = "okay";
-    device = <&trackball>;
-};
 
 #include <input/processors.dtsi>
 
@@ -74,7 +68,7 @@
     status = "okay";
     device = <&trackball>;
     /* レイヤー10に移動し、1秒(1000ms)操作がないと戻る設定 */
-    input-processors = <&zip_temp_layer 10 1000>;
+    input-processors = <&zip_temp_layer 10 1000>;jjj
 };
 
 &zip_temp_layer {
