@@ -57,7 +57,6 @@
         reg = <0>;
         spi-max-frequency = <2000000>;
         irq-gpios = <&xiao_d 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>; //MOT-D6
-        automouse-layer = <10>;
         snipe-layers = <2>;
         scroll-layers = <5>;
         //scroll-layers = <4 5 6>;
@@ -68,3 +67,19 @@
     status = "okay";
     device = <&trackball>;
 };
+
+#include <input/processors.dtsi>
+
+&trackball_listener {
+    status = "okay";
+    device = <&trackball>;
+    /* レイヤー10に移動し、1秒(1000ms)操作がないと戻る設定 */
+    input-processors = <&zip_temp_layer 10 1000>;
+};
+
+&zip_temp_layer {
+    /* 17番（左クリック）と、その周辺（16, 18, 32番など）を指定 */
+    /* ここに書いた番号のキー以外を押すと、即座にレイヤー10が解除されます */
+    excluded-positions = <16 17 18 >; 
+};
+/* --- ここまで --- */
