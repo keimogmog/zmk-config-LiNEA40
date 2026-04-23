@@ -1,4 +1,6 @@
 #include "LiNEA40.dtsi"
+#include <input/processors.dtsi>
+
 &default_transform {
     col-offset = <6>;
 };
@@ -12,15 +14,6 @@
         , <&gpio0 10 GPIO_ACTIVE_HIGH>  //col4-NFC2
         ;
 };
-
-/ {
-    trackball_listener {
-        compatible = "zmk,input-listener";
-        device = <&trackball>;
-
-    };
-};
-
 
 &pinctrl {
     spi0_default: spi0_default {
@@ -59,21 +52,17 @@
         irq-gpios = <&xiao_d 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>; //MOT-D6
         snipe-layers = <2>;
         scroll-layers = <5>;
-        //scroll-layers = <4 5 6>;
     };
+};
 
-#include <input/processors.dtsi>
-
+/* オートマウスレイヤーの設定 */
 &trackball_listener {
     status = "okay";
     device = <&trackball>;
-    /* レイヤー10に移動し、1秒(1000ms)操作がないと戻る設定 */
-    input-processors = <&zip_temp_layer 10 1000>;jjj
+    input-processors = <&zip_temp_layer 10 1000>;
 };
 
 &zip_temp_layer {
-    /* 17番（左クリック）と、その周辺（16, 18, 32番など）を指定 */
-    /* ここに書いた番号のキー以外を押すと、即座にレイヤー10が解除されます */
-    excluded-positions = <16 17 18 >; 
+    /* 17番（左クリック）などのキー以外を押すと解除 */
+    excluded-positions = <16 17 18>; 
 };
-/* --- ここまで --- */
