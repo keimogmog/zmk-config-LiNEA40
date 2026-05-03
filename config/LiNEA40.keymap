@@ -19,9 +19,9 @@
 
 &mmv {
     delay-ms = <0>;
-    trigger-period-ms = <18>;
+    trigger-period-ms = <16>;
     time-to-max-speed-ms = <500>;
-    acceleration-exponent = <2>;
+    acceleration-exponent = <1>;
 };
 
 //mouse scroll
