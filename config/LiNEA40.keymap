@@ -20,7 +20,7 @@
 &mmv {
     delay-ms = <0>;
     trigger-period-ms = <10>;
-    time-to-max-speed-ms = <700>;
+    time-to-max-speed-ms = <300>;
     acceleration-exponent = <2>;
 };
 
