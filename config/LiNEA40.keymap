@@ -57,7 +57,7 @@
         layers = <SCROLL>;
         input-processors =
             <&zip_xy_transform INPUT_TRANSFORM_Y_INVERT>,
-            //スクロール方向を逆転,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+            //スクロール方向を逆転,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
             <&zip_xy_to_scroll_mapper>;
     };
 };
@@ -123,12 +123,6 @@
             key-positions = <1 2>;
             layers = <1>;
         };
-
-        screenview {
-            bindings = <&kp LG(TAB)>;
-            key-positions = <3 1>;
-            layers = <1>;
-        };
     };
 
     behaviors {
@@ -167,6 +161,20 @@
             #binding-cells = <0>;
             bindings = <&bt BT_SEL 3 &to 0>;
             label = "IPAD";
+        };
+
+        screen: screen {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            bindings =
+                <&macro_press>,
+                <&kp LGUI>,
+                <&macro_tap>,
+                <&kp TAB>,
+                <&macro_release>,
+                <&kp LGUI>;
+
+            label = "SCREEN";
         };
     };
 
