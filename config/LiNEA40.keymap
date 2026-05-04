@@ -169,18 +169,16 @@
             label = "IPAD";
         };
 
-        screen: screen {
-            compatible = "zmk,behavior-macro";
-            #binding-cells = <0>;
-            bindings =
-                <&macro_press>,
-                <&kp LGUI>,
-                <&macro_tap>,
-                <&kp TAB>,
-                <&macro_release>,
-                <&kp LGUI>;
+screen: screen {
+    compatible = "zmk,behavior-macro";
+    #binding-cells = <0>;
+    bindings = <
+        &macro_press &kp LGUI
+        &macro_tap &kp TAB
+        &macro_release &kp LGUI
+    >;
+    label = "SCREEN";
 
-            label = "SCREEN";
         };
     };
 
