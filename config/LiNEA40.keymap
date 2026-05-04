@@ -125,7 +125,7 @@
         };
 
         screen {
-            bindings = <&mac>;
+            bindings = <&screen>;
             key-positions = <1 2 3>;
             layers = <1>;
         };
