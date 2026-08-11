@@ -1,4 +1,4 @@
-#define ZMK_POINTING_DEFAULT_SCRL_VAL 120
+#define ZMK_POINTING_DEFAULT_SCRL_VAL 40
 
 #include <dt-bindings/zmk/input_transform.h>
 #include <input/processors.dtsi>
