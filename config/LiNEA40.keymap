@@ -1,4 +1,4 @@
-#define ZMK_POINTING_DEFAULT_SCRL_VAL 150
+#define ZMK_POINTING_DEFAULT_SCRL_VAL 120
 
 #include <dt-bindings/zmk/input_transform.h>
 #include <input/processors.dtsi>
@@ -20,7 +20,7 @@
 &mmv {
     delay-ms = <0>;
     trigger-period-ms = <16>;
-    time-to-max-speed-ms = <500>;
+    time-to-max-speed-ms = <450>;
     acceleration-exponent = <1>;
 };
 
