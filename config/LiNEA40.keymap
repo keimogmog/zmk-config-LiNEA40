@@ -250,10 +250,9 @@
 
         MARK {
             bindings = <
-&kp EXCLAMATION             &kp AT           &kp HASH         &kp DOLLAR     &kp PERCENT                      &kp CARET     &kp AMPERSAND  &kp ASTERISK           &kp LEFT_PARENTHESIS  &kp LBKT
-&kp SLASH                   &kp KP_NUMBER_4  &kp KP_NUMBER_5  &kp SEMICOLON  &kp SEMICOLON                    &kp C_MUTE    &kp LS(LBKT)   &kp RIGHT_BRACKET      &kp BACKSLASH         &kp EQUAL
-&mt LEFT_SHIFT KP_NUMBER_0  &kp KP_NUMBER_1  &kp KP_NUMBER_2  &kp APOS       &kp SQT                          &kp KP_EQUAL  &kp INT3       &kp LS(RIGHT_BRACKET)  &kp LS(BACKSLASH)     &kp LS(INT1)
-&trans                      &trans           &trans           &trans         &trans         &trans    &trans  &trans                       &kp ASTERISK           &kp LEFT_PARENTHESIS  &kp LS(QUESTION)
+&kp EXCLAMATION     &kp AT          &kp HASH              &kp DOLLAR             &kp PERCENT                           &kp CARET   &kp AMPERSAND     &kp ASTERISK       &kp LEFT_PARENTHESIS   &kp RIGHT_PARENTHESIS
+&kp NUMBER_1        &kp NUMBER_2    &kp NUMBER_3          &kp NUMBER_4          &kp NUMBER_5                         &kp NUMBER_6  &kp NUMBER_7    &kp NUMBER_8        &kp NUMBER_9           &kp NUMBER_0
+&kp LBKT            &kp RIGHT_BRACKET &kp LS(LBKT)         &kp LS(RIGHT_BRACKET) &kp EQUAL                            &kp PLUS    &kp SEMICOLON      &kp LS(SEMICOLON) &kp APOS                 &kp LS(APOS)
             >;
 
             sensor-bindings = <&re_kp C_VOLUME_UP C_VOLUME_DOWN>;
