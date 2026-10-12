@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MIT
+description: LiNEA40 encoder-only inertial scrolling impulse
+
+compatible: "zmk,behavior-inertial-scroll"
+
+properties:
+  "#binding-cells":
+    type: int
+    required: true
+    const: 1
+  frame-ms:
+    type: int
+    default: 16
+  tail-frames:
+    type: int
+    default: 11
+  rapid-threshold-ms:
+    type: int
+    default: 90
+  grouping-threshold-ms:
+    type: int
+    default: 155
+  rapid-impulse-q8:
+    type: int
+    default: 120
+  grouped-impulse-q8:
+    type: int
+    default: 65
+  velocity-cap-q8:
+    type: int
+    default: 400
+  decay-percent:
+    type: int
+    default: 76
+
+binding-cells:
+  - direction
