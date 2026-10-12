@@ -64,3 +64,8 @@
     device = <&trackball>;
     input-processors = <&zip_temp_layer 10 1000>;
 };
+
+// The inertial encoder behavior emits wheel input only on the central half.
+&inertia_input_listener {
+    status = "okay";
+};
