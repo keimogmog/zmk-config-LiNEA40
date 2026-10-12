@@ -165,6 +165,14 @@
         };
     };
 
+    // A pointing input source needs a listener for HID wheel reports.
+    // Disabled on both halves by default; enabled only on central/right.
+    inertia_input_listener: inertia_input_listener {
+        compatible = "zmk,input-listener";
+        device = <&inertial_scroll>;
+        status = "disabled";
+    };
+
     macros {
         mac: new_macro {
             compatible = "zmk,behavior-macro";
