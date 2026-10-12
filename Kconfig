@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT
+config ZMK_LINEA40_ENCODER_INERTIA
+    bool "LiNEA40 rotary encoder inertial wheel scrolling"
+    default y
+    depends on ZMK_POINTING
+    help
+      Build the encoder-only inertial wheel scrolling behavior.
+      The trackball input processor remains unchanged.
