@@ -1,0 +1,6 @@
+name: linea40-encoder-inertia
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    dts_root: .
