@@ -142,12 +142,26 @@
             bindings = <&kp>, <&kp>;
         };
 
+        inertial_scroll: inertial_scroll {
+            compatible = "zmk,behavior-inertial-scroll";
+            #binding-cells = <1>;
+            // v1: exact isolated ticks + modest speed-sensitive 176ms tail.
+            frame-ms = <16>;
+            tail-frames = <11>;
+            rapid-threshold-ms = <90>;
+            grouping-threshold-ms = <155>;
+            rapid-impulse-q8 = <120>;
+            grouped-impulse-q8 = <65>;
+            velocity-cap-q8 = <400>;
+            decay-percent = <76>;
+        };
+
         mouse_scrl: mouse_wheel_scrl {
             compatible = "zmk,behavior-sensor-rotate-var";
             #sensor-binding-cells = <2>;
-            bindings = <&msc>, <&msc>;
-
-            tap-ms = <15>;
+            bindings = <&inertial_scroll>, <&inertial_scroll>;
+            // Only the press impulse matters; release does not cancel inertia.
+            tap-ms = <5>;
         };
     };
 
