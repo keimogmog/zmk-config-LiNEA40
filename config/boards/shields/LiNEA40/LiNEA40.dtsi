@@ -112,7 +112,10 @@
             velocity-cap-q8 = <400>;
             decay-percent = <76>;
             slow-detent-ticks = <2>; // Larger immediate wheel step when turning slowly
-            rapid-detent-ticks = <1>; // Preserve v1 fast-spin response
+            rapid-detent-ticks = <1>; // Fallback for hosts without hi-res HID
+            hires-detent-units = <16>; // 16 fine units = one host wheel detent
+            hires-immediate-units = <6>; // Immediate response, no waiting
+            hires-chunk-units = <5>; // Remainder delivered every 16ms
         };
     };
 
