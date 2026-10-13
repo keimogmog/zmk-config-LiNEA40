@@ -22,6 +22,10 @@
 #include <zmk/behavior.h>
 #include <dt-bindings/zmk/pointing.h>
 
+#if IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+#include <zmk/pointing/resolution_multipliers.h>
+#endif
+
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
 struct inertia_cfg {
@@ -35,6 +39,9 @@ struct inertia_cfg {
     uint8_t decay_percent;
     uint8_t slow_detent_ticks;
     uint8_t rapid_detent_ticks;
+    uint8_t hires_detent_units;
+    uint8_t hires_immediate_units;
+    uint8_t hires_chunk_units;
 };
 
 struct inertia_data {
@@ -46,6 +53,8 @@ struct inertia_data {
     int64_t last_detent_ms;
     int8_t direction;
     uint8_t frames_remaining;
+    // A fraction of one physical detent, delivered over later HID reports.
+    int32_t smooth_remaining;
 };
 
 static void inertia_tick(struct k_work *work) {
@@ -74,6 +83,16 @@ static void inertia_tick(struct k_work *work) {
         } else {
             continue_tail = true;
         }
+    }
+
+    if (data->smooth_remaining != 0) {
+        // Split the rest of each detent into fine-grained HID wheel packets.
+        int32_t step = CLAMP(data->smooth_remaining,
+                             -(int32_t)cfg->hires_chunk_units,
+                              (int32_t)cfg->hires_chunk_units);
+        wheel += step;
+        data->smooth_remaining -= step;
+        continue_tail = continue_tail || data->smooth_remaining != 0;
     }
 
     k_spin_unlock(&data->lock, key);
@@ -108,18 +127,26 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
     const int8_t direction = wheel_direction > 0 ? 1 : -1;
     const int64_t now = k_uptime_get();
 
+    // On supported hosts, HID Resolution Multiplier allows fractional
+    // wheel steps: e.g. wheel=15 means 16 HID units per normal detent.
+    // Without smooth scrolling, keep the proven v1.1 scroll behavior.
+    uint8_t hi_res_factor = 1;
+#if IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+    uint8_t wheel_res =
+        zmk_pointing_resolution_multipliers_get_current_profile().wheel;
+    if (wheel_res > 0 && wheel_res < 16) {
+        hi_res_factor = 16 / (16 - wheel_res);
+    }
+#endif
+
     bool has_tail;
     int16_t immediate_ticks;
     k_spinlock_key_t key = k_spin_lock(&data->lock);
     int64_t interval = (data->last_detent_ms < 0) ? INT64_MAX
                       : now - data->last_detent_ms;
 
-    // A slow detent must be prominent enough for macOS to move immediately.
-    // Keep the existing fast-spin response and tail unchanged.
     bool rapid = interval >= 0 && interval <= cfg->rapid_threshold_ms &&
                  data->direction == direction;
-    immediate_ticks = direction * (rapid ? cfg->rapid_detent_ticks
-                                         : cfg->slow_detent_ticks);
 
     if (interval < 0 || interval > cfg->grouping_threshold_ms ||
         data->direction != direction) {
@@ -127,22 +154,39 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
         data->velocity_q8 = 0;
         data->fractional_q8 = 0;
         data->frames_remaining = 0;
+        data->smooth_remaining = 0;
     } else {
-        int32_t impulse = interval <= cfg->rapid_threshold_ms
-                          ? cfg->rapid_impulse_q8
-                          : cfg->grouped_impulse_q8;
+        int32_t impulse = (interval <= cfg->rapid_threshold_ms
+                           ? cfg->rapid_impulse_q8
+                           : cfg->grouped_impulse_q8) * hi_res_factor;
+        int32_t cap = cfg->velocity_cap_q8 * hi_res_factor;
         data->velocity_q8 = CLAMP(data->velocity_q8 + direction * impulse,
-                                  -cfg->velocity_cap_q8, cfg->velocity_cap_q8);
+                                  -cap, cap);
         data->frames_remaining = cfg->tail_frames;
+    }
+
+    if (hi_res_factor > 1) {
+        // 16x resolution: 6 fine units immediately, then 5 + 5 units
+        // on the following 16ms frames. Slow turns remain responsive.
+        int32_t total = (cfg->hires_detent_units * hi_res_factor) / 16;
+        int32_t first = MIN(total, (cfg->hires_immediate_units * hi_res_factor) / 16);
+        immediate_ticks = direction * first;
+        data->smooth_remaining += direction * (total - first);
+    } else {
+        // Host did not negotiate HID resolution; preserve normal wheel path.
+        immediate_ticks = direction * (rapid ? cfg->rapid_detent_ticks
+                                              : cfg->slow_detent_ticks);
     }
 
     data->last_detent_ms = now;
     data->direction = direction;
-    has_tail = data->frames_remaining != 0;
+    has_tail = data->frames_remaining != 0 || data->smooth_remaining != 0;
     k_spin_unlock(&data->lock, key);
 
-    // Larger immediate step for slow/isolated detents; rapid spinning retains v1 rate.
-    input_report_rel(dev, INPUT_REL_WHEEL, immediate_ticks, true, K_NO_WAIT);
+    // Always report physical direction immediately; no artificial input delay.
+    if (immediate_ticks != 0) {
+        input_report_rel(dev, INPUT_REL_WHEEL, immediate_ticks, true, K_NO_WAIT);
+    }
 
     if (has_tail) {
         k_work_reschedule(&data->tick_work, K_MSEC(cfg->frame_ms));
@@ -176,6 +220,9 @@ static const struct behavior_driver_api inertia_api = {
         .decay_percent = DT_INST_PROP(n, decay_percent),                               \
         .slow_detent_ticks = DT_INST_PROP(n, slow_detent_ticks),                       \
         .rapid_detent_ticks = DT_INST_PROP(n, rapid_detent_ticks),                     \
+        .hires_detent_units = DT_INST_PROP(n, hires_detent_units),                     \
+        .hires_immediate_units = DT_INST_PROP(n, hires_immediate_units),               \
+        .hires_chunk_units = DT_INST_PROP(n, hires_chunk_units),                       \
     };                                                                                 \
     BEHAVIOR_DT_INST_DEFINE(n, inertia_init, NULL, &inertia_data_##n,                  \
                            &inertia_cfg_##n, POST_KERNEL,                             \
