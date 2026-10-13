@@ -38,6 +38,15 @@ properties:
   rapid-detent-ticks:
     type: int
     default: 1
+  hires-detent-units:
+    type: int
+    default: 16
+  hires-immediate-units:
+    type: int
+    default: 6
+  hires-chunk-units:
+    type: int
+    default: 5
 
 binding-cells:
   - direction
