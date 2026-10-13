@@ -104,18 +104,18 @@
             #binding-cells = <1>;
             // v1: exact isolated ticks + modest speed-sensitive 176ms tail.
             frame-ms = <16>;
-            tail-frames = <11>;
-            rapid-threshold-ms = <90>;
-            grouping-threshold-ms = <155>;
-            rapid-impulse-q8 = <120>;
-            grouped-impulse-q8 = <65>;
-            velocity-cap-q8 = <400>;
+            tail-frames = <11>; // up to 176ms, but lower amplitude
+            rapid-threshold-ms = <75>; // momentum only when actively spinning
+            grouping-threshold-ms = <90>; // do not coast on gentle turns
+            rapid-impulse-q8 = <35>; // gentle momentum kick
+            grouped-impulse-q8 = <15>;
+            velocity-cap-q8 = <120>;
             decay-percent = <76>;
             slow-detent-ticks = <2>; // Larger immediate wheel step when turning slowly
             rapid-detent-ticks = <1>; // Fallback for hosts without hi-res HID
-            hires-detent-units = <16>; // 16 fine units = one host wheel detent
-            hires-immediate-units = <6>; // Immediate response, no waiting
-            hires-chunk-units = <5>; // Remainder delivered every 16ms
+            hires-detent-units = <4>; // 4 fine units per physical encoder detent
+            hires-immediate-units = <2>; // exactly half immediately
+            hires-chunk-units = <1>; // +1 at 16ms and +1 at 32ms
         };
     };
 
