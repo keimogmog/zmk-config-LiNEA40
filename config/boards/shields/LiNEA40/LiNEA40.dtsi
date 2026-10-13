@@ -111,6 +111,8 @@
             grouped-impulse-q8 = <65>;
             velocity-cap-q8 = <400>;
             decay-percent = <76>;
+            slow-detent-ticks = <2>; // Larger immediate wheel step when turning slowly
+            rapid-detent-ticks = <1>; // Preserve v1 fast-spin response
         };
     };
 
