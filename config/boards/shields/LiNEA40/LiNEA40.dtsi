@@ -98,4 +98,28 @@
         compatible = "zmk,input-listener";
         status = "disabled";
     };
+    behaviors {
+        inertial_scroll: inertial_scroll {
+            compatible = "zmk,behavior-inertial-scroll";
+            #binding-cells = <1>;
+            // v1: exact isolated ticks + modest speed-sensitive 176ms tail.
+            frame-ms = <16>;
+            tail-frames = <11>;
+            rapid-threshold-ms = <90>;
+            grouping-threshold-ms = <155>;
+            rapid-impulse-q8 = <120>;
+            grouped-impulse-q8 = <65>;
+            velocity-cap-q8 = <400>;
+            decay-percent = <76>;
+        };
+    };
+
+    // A pointing input source needs a listener for HID wheel reports.
+    // Disabled on both halves by default; enabled only on central/right.
+    inertia_input_listener: inertia_input_listener {
+        compatible = "zmk,input-listener";
+        device = <&inertial_scroll>;
+        status = "disabled";
+    };
+
 };
