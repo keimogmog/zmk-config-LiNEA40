@@ -51,6 +51,14 @@ properties:
     type: int
     default: 3
     description: New encoder events per one previous coarse sensor event
+  coast-wait-ms:
+    type: int
+    default: 55
+    description: Idle time since the last detent before any synthetic glide starts
+  coast-min-fast-intervals:
+    type: int
+    default: 4
+    description: Minimum consecutive fast same-direction intervals to arm glide
 
 binding-cells:
   - direction
