@@ -156,18 +156,24 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
         data->frames_remaining = 0;
         data->smooth_remaining = 0;
     } else {
+        // Keep inertia proportional to the *actual* wheel distance in this
+        // experiment. The previous version multiplied by the full 16x HID
+        // resolution, even when the immediate per-detent distance was reduced.
+        int32_t momentum_gain = (hi_res_factor > 1)
+            ? MAX(1, ((int32_t)hi_res_factor * cfg->hires_detent_units) / 16)
+            : 1;
         int32_t impulse = (interval <= cfg->rapid_threshold_ms
                            ? cfg->rapid_impulse_q8
-                           : cfg->grouped_impulse_q8) * hi_res_factor;
-        int32_t cap = cfg->velocity_cap_q8 * hi_res_factor;
+                           : cfg->grouped_impulse_q8) * momentum_gain;
+        int32_t cap = cfg->velocity_cap_q8 * momentum_gain;
         data->velocity_q8 = CLAMP(data->velocity_q8 + direction * impulse,
                                   -cap, cap);
         data->frames_remaining = cfg->tail_frames;
     }
 
     if (hi_res_factor > 1) {
-        // 16x resolution: 6 fine units immediately, then 5 + 5 units
-        // on the following 16ms frames. Slow turns remain responsive.
+        // Low-gain test: 4 HID fine units per detent instead of 16;
+        // 2 immediately and 1 + 1 in the next two 16 ms frames.
         int32_t total = (cfg->hires_detent_units * hi_res_factor) / 16;
         int32_t first = MIN(total, (cfg->hires_immediate_units * hi_res_factor) / 16);
         immediate_ticks = direction * first;
