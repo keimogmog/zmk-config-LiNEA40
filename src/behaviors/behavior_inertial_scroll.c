@@ -33,6 +33,8 @@ struct inertia_cfg {
     int32_t grouped_impulse_q8;
     int32_t velocity_cap_q8;
     uint8_t decay_percent;
+    uint8_t slow_detent_ticks;
+    uint8_t rapid_detent_ticks;
 };
 
 struct inertia_data {
@@ -107,9 +109,17 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
     const int64_t now = k_uptime_get();
 
     bool has_tail;
+    int16_t immediate_ticks;
     k_spinlock_key_t key = k_spin_lock(&data->lock);
     int64_t interval = (data->last_detent_ms < 0) ? INT64_MAX
                       : now - data->last_detent_ms;
+
+    // A slow detent must be prominent enough for macOS to move immediately.
+    // Keep the existing fast-spin response and tail unchanged.
+    bool rapid = interval >= 0 && interval <= cfg->rapid_threshold_ms &&
+                 data->direction == direction;
+    immediate_ticks = direction * (rapid ? cfg->rapid_detent_ticks
+                                         : cfg->slow_detent_ticks);
 
     if (interval < 0 || interval > cfg->grouping_threshold_ms ||
         data->direction != direction) {
@@ -131,8 +141,8 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
     has_tail = data->frames_remaining != 0;
     k_spin_unlock(&data->lock, key);
 
-    // Immediate, responsive tick even for isolated single detents.
-    input_report_rel(dev, INPUT_REL_WHEEL, direction, true, K_NO_WAIT);
+    // Larger immediate step for slow/isolated detents; rapid spinning retains v1 rate.
+    input_report_rel(dev, INPUT_REL_WHEEL, immediate_ticks, true, K_NO_WAIT);
 
     if (has_tail) {
         k_work_reschedule(&data->tick_work, K_MSEC(cfg->frame_ms));
@@ -164,6 +174,8 @@ static const struct behavior_driver_api inertia_api = {
         .grouped_impulse_q8 = DT_INST_PROP(n, grouped_impulse_q8),                     \
         .velocity_cap_q8 = DT_INST_PROP(n, velocity_cap_q8),                           \
         .decay_percent = DT_INST_PROP(n, decay_percent),                               \
+        .slow_detent_ticks = DT_INST_PROP(n, slow_detent_ticks),                       \
+        .rapid_detent_ticks = DT_INST_PROP(n, rapid_detent_ticks),                     \
     };                                                                                 \
     BEHAVIOR_DT_INST_DEFINE(n, inertia_init, NULL, &inertia_data_##n,                  \
                            &inertia_cfg_##n, POST_KERNEL,                             \
