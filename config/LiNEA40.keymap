@@ -145,9 +145,9 @@
         mouse_scrl: mouse_wheel_scrl {
             compatible = "zmk,behavior-sensor-rotate-var";
             #sensor-binding-cells = <2>;
-            bindings = <&msc>, <&msc>;
-
-            tap-ms = <20>;
+            bindings = <&inertial_scroll>, <&inertial_scroll>;
+            // Only the press impulse matters; release does not cancel inertia.
+            tap-ms = <5>;
         };
     };
 
@@ -250,9 +250,9 @@
 
         MARK {
             bindings = <
-&kp EXCLAMATION             &kp AT           &kp HASH         &kp DOLLAR     &kp PERCENT                      &kp CARET     &kp AMPERSAND  &kp ASTERISK           &kp LEFT_PARENTHESIS  &kp LBKT
-&kp SLASH                   &kp KP_NUMBER_4  &kp KP_NUMBER_5  &kp SEMICOLON  &kp SEMICOLON                    &kp C_MUTE    &kp LS(LBKT)   &kp RIGHT_BRACKET      &kp BACKSLASH         &kp EQUAL
-&mt LEFT_SHIFT KP_NUMBER_0  &kp KP_NUMBER_1  &kp KP_NUMBER_2  &kp APOS       &kp SQT                          &kp KP_EQUAL  &kp INT3       &kp LS(RIGHT_BRACKET)  &kp LS(BACKSLASH)     &kp LS(INT1)
+&kp EXCLAMATION  &kp AT             &kp HASH           &kp DOLLAR             &kp PERCENT                                &kp CARET             &kp AMPERSAND        &kp ASTERISK           &kp LEFT_PARENTHESIS  &kp RIGHT_PARENTHESIS
+&kp LBKT         &kp RIGHT_BRACKET  &kp LS(LBKT)       &kp LS(RIGHT_BRACKET)  &kp EQUAL                                  &kp LS(EQUAL)         &kp SEMICOLON        &kp LS(SEMICOLON)     &kp APOS              &kp LS(APOS)
+&kp MINUS        &kp LS(MINUS)     &kp BACKSLASH      &kp LS(BACKSLASH)      &kp SLASH                                  &kp LS(SLASH)         &kp GRAVE            &kp LS(GRAVE)         &kp LS(COMMA)         &kp LS(DOT)
 &trans                      &trans           &trans           &trans         &trans         &trans    &trans  &trans                       &kp ASTERISK           &kp LEFT_PARENTHESIS  &kp LS(QUESTION)
             >;
 
