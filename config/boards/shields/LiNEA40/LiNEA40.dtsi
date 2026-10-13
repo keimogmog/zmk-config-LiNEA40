@@ -113,8 +113,8 @@
             decay-percent = <70>; // stronger deceleration after stop
             slow-detent-ticks = <2>; // Larger immediate wheel step when turning slowly
             rapid-detent-ticks = <1>; // Fallback for hosts without hi-res HID
-            hires-detent-units = <2>; // v3.2: 0,1,1 at 16x; 1/3 less base travel, may stutter
-            hires-immediate-units = <2>; // exactly half immediately
+            hires-detent-units = <2>; // 2 HID units per four 24-trigger events at 16x
+            hires-immediate-units = <2>; // send each nonzero physical event immediately
             hires-chunk-units = <1>; // buffer only for any excess fine units
             encoder-trigger-divisor = <4>; // 25% less normal travel (16 -> 12 HID units/revolution at 16x)
             coast-wait-ms = <55>; // no synthetic acceleration during active rotation
