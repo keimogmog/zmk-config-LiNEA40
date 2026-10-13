@@ -32,6 +32,12 @@ properties:
   decay-percent:
     type: int
     default: 76
+  slow-detent-ticks:
+    type: int
+    default: 2
+  rapid-detent-ticks:
+    type: int
+    default: 1
 
 binding-cells:
   - direction
