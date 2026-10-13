@@ -102,21 +102,23 @@
         inertial_scroll: inertial_scroll {
             compatible = "zmk,behavior-inertial-scroll";
             #binding-cells = <1>;
-            // v3.2 A/B: firmware momentum fully disabled; high-resolution physical scroll unchanged.
+            // v3.3: v3.2 scroll unchanged; only fast-spin produces post-stop glide.
             frame-ms = <16>;
-            tail-frames = <0>; // no firmware momentum frames
-            rapid-threshold-ms = <30>; // fast spin only at 24 triggers/rotation
+            tail-frames = <9>; // only after fast spin stops; max ~144ms
+            rapid-threshold-ms = <30>; // each of four consecutive gaps must be <=30ms
             grouping-threshold-ms = <45>; // prevents slow motion from initiating inertia
-            rapid-impulse-q8 = <0>; // disable momentum from rapid rotation
-            grouped-impulse-q8 = <0>; // disable momentum from grouped rotation
-            velocity-cap-q8 = <0>; // hard zero cap even if impulse code is entered
-            decay-percent = <76>;
+            rapid-impulse-q8 = <16>; // increment initial glide velocity for fast gaps
+            grouped-impulse-q8 = <140>; // initial velocity offset in Q8 fine units
+            velocity-cap-q8 = <450>; // gentle cap (~1.76 fine units per 16ms frame)
+            decay-percent = <78>; // small, short spin-down after release
             slow-detent-ticks = <2>; // Larger immediate wheel step when turning slowly
             rapid-detent-ticks = <1>; // Fallback for hosts without hi-res HID
             hires-detent-units = <2>; // v3.2: 0,1,1 at 16x; 1/3 less base travel, may stutter
             hires-immediate-units = <2>; // exactly half immediately
             hires-chunk-units = <1>; // buffer only for any excess fine units
-            encoder-trigger-divisor = <3>; // keep 4 HID units per old 45-degree event
+            encoder-trigger-divisor = <3>; // preserve v3.2 physical scroll distance
+            coast-wait-ms = <55>; // no synthetic acceleration during active rotation
+            coast-min-fast-intervals = <4>; // five quick events before arming coast
         };
     };
 
