@@ -47,6 +47,10 @@ properties:
   hires-chunk-units:
     type: int
     default: 5
+  encoder-trigger-divisor:
+    type: int
+    default: 3
+    description: New encoder events per one previous coarse sensor event
 
 binding-cells:
   - direction

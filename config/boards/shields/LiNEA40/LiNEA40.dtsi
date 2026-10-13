@@ -91,7 +91,7 @@
     sensors: sensors {
         compatible = "zmk,keymap-sensors";
         sensors = <&left_encoder>;
-        triggers-per-rotation = <8>;
+        triggers-per-rotation = <24>; // 3x finer events; behavior compensates distance
     };
 
     trackball_listener: trackball_listener {
@@ -105,17 +105,18 @@
             // v1: exact isolated ticks + modest speed-sensitive 176ms tail.
             frame-ms = <16>;
             tail-frames = <11>; // up to 176ms, but lower amplitude
-            rapid-threshold-ms = <75>; // momentum only when actively spinning
-            grouping-threshold-ms = <90>; // do not coast on gentle turns
-            rapid-impulse-q8 = <35>; // gentle momentum kick
-            grouped-impulse-q8 = <15>;
-            velocity-cap-q8 = <120>;
+            rapid-threshold-ms = <30>; // fast spin only at 24 triggers/rotation
+            grouping-threshold-ms = <45>; // prevents slow motion from initiating inertia
+            rapid-impulse-q8 = <12>; // 3x events, ~1/3 impulse
+            grouped-impulse-q8 = <5>;
+            velocity-cap-q8 = <60>;
             decay-percent = <76>;
             slow-detent-ticks = <2>; // Larger immediate wheel step when turning slowly
             rapid-detent-ticks = <1>; // Fallback for hosts without hi-res HID
             hires-detent-units = <4>; // 4 fine units per physical encoder detent
             hires-immediate-units = <2>; // exactly half immediately
-            hires-chunk-units = <1>; // +1 at 16ms and +1 at 32ms
+            hires-chunk-units = <1>; // buffer only for any excess fine units
+            encoder-trigger-divisor = <3>; // keep 4 HID units per old 45-degree event
         };
     };
 
