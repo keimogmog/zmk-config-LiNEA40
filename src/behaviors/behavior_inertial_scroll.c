@@ -42,6 +42,7 @@ struct inertia_cfg {
     uint8_t hires_detent_units;
     uint8_t hires_immediate_units;
     uint8_t hires_chunk_units;
+    uint8_t encoder_trigger_divisor;
 };
 
 struct inertia_data {
@@ -55,6 +56,8 @@ struct inertia_data {
     uint8_t frames_remaining;
     // A fraction of one physical detent, delivered over later HID reports.
     int32_t smooth_remaining;
+    // Distribute one old scroll event over N smaller encoder events.
+    uint8_t detent_unit_remainder;
 };
 
 static void inertia_tick(struct k_work *work) {
@@ -150,7 +153,10 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
 
     if (interval < 0 || interval > cfg->grouping_threshold_ms ||
         data->direction != direction) {
-        // One slow detent should be exact; reverse clears old momentum.
+        // Stop an old glide. Do not carry partial travel into reverse turns.
+        if (data->direction != direction) {
+            data->detent_unit_remainder = 0;
+        }
         data->velocity_q8 = 0;
         data->fractional_q8 = 0;
         data->frames_remaining = 0;
@@ -171,17 +177,25 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
         data->frames_remaining = cfg->tail_frames;
     }
 
+    // Each sensor event is now 1/3 of its previous angular travel.
+    // Preserve *distance per revolution* while reducing step spacing.
+    // Example at 16x host resolution: 4 fine units / 3 events = 1,1,2.
+    int32_t units_per_old_event = (hi_res_factor > 1)
+        ? (cfg->hires_detent_units * hi_res_factor) / 16
+        : (rapid ? cfg->rapid_detent_ticks : cfg->slow_detent_ticks);
+    int32_t credits = units_per_old_event + data->detent_unit_remainder;
+    int32_t total = credits / cfg->encoder_trigger_divisor;
+    data->detent_unit_remainder = credits % cfg->encoder_trigger_divisor;
+
     if (hi_res_factor > 1) {
-        // Low-gain test: 4 HID fine units per detent instead of 16;
-        // 2 immediately and 1 + 1 in the next two 16 ms frames.
-        int32_t total = (cfg->hires_detent_units * hi_res_factor) / 16;
+        // With 4 units/3 events, there is no need to artificially stagger
+        // every tick over 32ms. The physical encoder now supplies finer timing.
         int32_t first = MIN(total, (cfg->hires_immediate_units * hi_res_factor) / 16);
         immediate_ticks = direction * first;
         data->smooth_remaining += direction * (total - first);
     } else {
-        // Host did not negotiate HID resolution; preserve normal wheel path.
-        immediate_ticks = direction * (rapid ? cfg->rapid_detent_ticks
-                                              : cfg->slow_detent_ticks);
+        // Non-hires host: a coarser fallback. Avoid tripling scroll distance.
+        immediate_ticks = direction * total;
     }
 
     data->last_detent_ms = now;
@@ -195,7 +209,9 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
     }
 
     if (has_tail) {
-        k_work_reschedule(&data->tick_work, K_MSEC(cfg->frame_ms));
+        // Do not continually reset the deadline when encoder events arrive:
+        // that would postpone fine-scroll output until spinning stops.
+        k_work_schedule(&data->tick_work, K_MSEC(cfg->frame_ms));
     } else {
         k_work_cancel_delayable(&data->tick_work);
     }
@@ -229,6 +245,7 @@ static const struct behavior_driver_api inertia_api = {
         .hires_detent_units = DT_INST_PROP(n, hires_detent_units),                     \
         .hires_immediate_units = DT_INST_PROP(n, hires_immediate_units),               \
         .hires_chunk_units = DT_INST_PROP(n, hires_chunk_units),                       \
+        .encoder_trigger_divisor = DT_INST_PROP(n, encoder_trigger_divisor),           \
     };                                                                                 \
     BEHAVIOR_DT_INST_DEFINE(n, inertia_init, NULL, &inertia_data_##n,                  \
                            &inertia_cfg_##n, POST_KERNEL,                             \
