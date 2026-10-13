@@ -113,7 +113,7 @@
             decay-percent = <76>;
             slow-detent-ticks = <2>; // Larger immediate wheel step when turning slowly
             rapid-detent-ticks = <1>; // Fallback for hosts without hi-res HID
-            hires-detent-units = <4>; // 4 fine units per physical encoder detent
+            hires-detent-units = <3>; // 25% less travel: 1 fine HID unit per 24-trigger event
             hires-immediate-units = <2>; // exactly half immediately
             hires-chunk-units = <1>; // buffer only for any excess fine units
             encoder-trigger-divisor = <3>; // keep 4 HID units per old 45-degree event
