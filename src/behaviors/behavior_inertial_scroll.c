@@ -2,9 +2,12 @@
 /*
  * LiNEA40 encoder-only inertia experiment.
  *
- * Each encoder detent produces an immediate, precise wheel tick.
- * Repeated same-direction detents within a short window add a small
- * exponentially decaying scroll tail. A reverse detent clears the old tail.
+ * v3.3 fast-only coast experiment based on the v3.2 inertia-OFF version.
+ * Physical encoder events emit precisely the same high-resolution wheel
+ * packets as v3.2, with NO firmware boost while the encoder is turning.
+ * Four consecutive short same-direction intervals arm a light glide that
+ * starts only after the encoder has stopped for coast-wait-ms.
+ * Any new encoder event immediately cancels the glide.
  *
  * No global event handlers or trackball changes.
  */
@@ -43,6 +46,8 @@ struct inertia_cfg {
     uint8_t hires_immediate_units;
     uint8_t hires_chunk_units;
     uint8_t encoder_trigger_divisor;
+    uint16_t coast_wait_ms;
+    uint8_t coast_min_fast_intervals;
 };
 
 struct inertia_data {
@@ -58,6 +63,11 @@ struct inertia_data {
     int32_t smooth_remaining;
     // Distribute one old scroll event over N smaller encoder events.
     uint8_t detent_unit_remainder;
+    // Fast-spin tracking; never feeds back into live encoder wheel distance.
+    uint8_t fast_intervals;
+    uint16_t last_fast_interval_ms;
+    uint8_t endpoint_hires_factor;
+    bool coasting;
 };
 
 static void inertia_tick(struct k_work *work) {
@@ -66,36 +76,54 @@ static void inertia_tick(struct k_work *work) {
     const struct inertia_cfg *cfg = data->dev->config;
 
     int32_t wheel = 0;
-    bool continue_tail = false;
+    int32_t next_delay_ms = 0;
+    const int64_t now = k_uptime_get();
 
     k_spinlock_key_t key = k_spin_lock(&data->lock);
 
-    if (data->frames_remaining > 0 && data->velocity_q8 != 0) {
-        data->fractional_q8 += data->velocity_q8;
-        wheel = data->fractional_q8 / 256;
-        data->fractional_q8 -= wheel * 256;
-
-        data->velocity_q8 = (data->velocity_q8 * cfg->decay_percent) / 100;
-        data->frames_remaining--;
-
-        if (data->frames_remaining == 0 ||
-            (data->velocity_q8 > -5 && data->velocity_q8 < 5)) {
-            data->velocity_q8 = 0;
-            data->fractional_q8 = 0;
-            data->frames_remaining = 0;
+    // Fast consecutive detents arm the coast. Do not emit extra wheel
+    // units until there has been a real gap with no encoder movement.
+    if (!data->coasting &&
+        data->fast_intervals >= cfg->coast_min_fast_intervals &&
+        data->endpoint_hires_factor > 1) {
+        int64_t idle_ms = now - data->last_detent_ms;
+        if (idle_ms < cfg->coast_wait_ms) {
+            next_delay_ms = cfg->coast_wait_ms - idle_ms;
         } else {
-            continue_tail = true;
+            int32_t speed_q8 =
+                cfg->grouped_impulse_q8 +
+                (cfg->rapid_threshold_ms - data->last_fast_interval_ms) *
+                    cfg->rapid_impulse_q8;
+
+            // On macOS/16x HID these are *fine* wheel units, not
+            // traditional whole wheel clicks. Avoid a big fallback tail.
+            speed_q8 = CLAMP(speed_q8, 0, cfg->velocity_cap_q8);
+            speed_q8 = (speed_q8 * data->endpoint_hires_factor + 8) / 16;
+
+            data->velocity_q8 = data->direction * speed_q8;
+            data->fractional_q8 = 0;
+            data->frames_remaining = cfg->tail_frames;
+            data->fast_intervals = 0;
+            data->coasting = data->frames_remaining > 0 &&
+                             data->velocity_q8 != 0;
         }
     }
 
-    if (data->smooth_remaining != 0) {
-        // Split the rest of each detent into fine-grained HID wheel packets.
-        int32_t step = CLAMP(data->smooth_remaining,
-                             -(int32_t)cfg->hires_chunk_units,
-                              (int32_t)cfg->hires_chunk_units);
-        wheel += step;
-        data->smooth_remaining -= step;
-        continue_tail = continue_tail || data->smooth_remaining != 0;
+    if (data->coasting) {
+        // This small synthetic tail runs only after the fast spin ended.
+        data->fractional_q8 += data->velocity_q8;
+        wheel = data->fractional_q8 / 256;
+        data->fractional_q8 -= wheel * 256;
+        data->velocity_q8 = (data->velocity_q8 * cfg->decay_percent) / 100;
+
+        if (--data->frames_remaining == 0 || data->velocity_q8 == 0) {
+            data->velocity_q8 = 0;
+            data->fractional_q8 = 0;
+            data->frames_remaining = 0;
+            data->coasting = false;
+        } else {
+            next_delay_ms = cfg->frame_ms;
+        }
     }
 
     k_spin_unlock(&data->lock, key);
@@ -103,8 +131,8 @@ static void inertia_tick(struct k_work *work) {
     if (wheel != 0) {
         input_report_rel(data->dev, INPUT_REL_WHEEL, (int16_t)wheel, true, K_NO_WAIT);
     }
-    if (continue_tail) {
-        k_work_reschedule(&data->tick_work, K_MSEC(cfg->frame_ms));
+    if (next_delay_ms > 0) {
+        k_work_reschedule(&data->tick_work, K_MSEC(next_delay_ms));
     }
 }
 
@@ -142,7 +170,7 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
     }
 #endif
 
-    bool has_tail;
+    bool arm_coast;
     int16_t immediate_ticks;
     k_spinlock_key_t key = k_spin_lock(&data->lock);
     int64_t interval = (data->last_detent_ms < 0) ? INT64_MAX
@@ -151,35 +179,31 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
     bool rapid = interval >= 0 && interval <= cfg->rapid_threshold_ms &&
                  data->direction == direction;
 
-    if (interval < 0 || interval > cfg->grouping_threshold_ms ||
-        data->direction != direction) {
-        // Stop an old glide. Do not carry partial travel into reverse turns.
-        if (data->direction != direction) {
-            data->detent_unit_remainder = 0;
-        }
-        data->velocity_q8 = 0;
-        data->fractional_q8 = 0;
-        data->frames_remaining = 0;
-        data->smooth_remaining = 0;
-    } else {
-        // Keep inertia proportional to the *actual* wheel distance in this
-        // experiment. The previous version multiplied by the full 16x HID
-        // resolution, even when the immediate per-detent distance was reduced.
-        int32_t momentum_gain = (hi_res_factor > 1)
-            ? MAX(1, ((int32_t)hi_res_factor * cfg->hires_detent_units) / 16)
-            : 1;
-        int32_t impulse = (interval <= cfg->rapid_threshold_ms
-                           ? cfg->rapid_impulse_q8
-                           : cfg->grouped_impulse_q8) * momentum_gain;
-        int32_t cap = cfg->velocity_cap_q8 * momentum_gain;
-        data->velocity_q8 = CLAMP(data->velocity_q8 + direction * impulse,
-                                  -cap, cap);
-        data->frames_remaining = cfg->tail_frames;
+    // Any encoder motion stops the old synthetic tail, including a reverse.
+    // Never change physical scroll distance based on recent speed.
+    data->velocity_q8 = 0;
+    data->fractional_q8 = 0;
+    data->frames_remaining = 0;
+    data->coasting = false;
+    data->smooth_remaining = 0;
+
+    if (data->direction != direction) {
+        data->detent_unit_remainder = 0;
     }
+    if (rapid) {
+        if (data->fast_intervals < UINT8_MAX) {
+            data->fast_intervals++;
+        }
+        data->last_fast_interval_ms = interval;
+    } else {
+        data->fast_intervals = 0;
+        data->last_fast_interval_ms = 0;
+    }
+    data->endpoint_hires_factor = hi_res_factor;
 
     // Each sensor event is now 1/3 of its previous angular travel.
-    // Preserve *distance per revolution* while reducing step spacing.
-    // Example at 16x host resolution: 4 fine units / 3 events = 1,1,2.
+    // Preserve the v3.2 physical wheel distance exactly (at 16x: 0,1,1).
+    // The fast coast is separate and never accelerates in-flight detents.
     int32_t units_per_old_event = (hi_res_factor > 1)
         ? (cfg->hires_detent_units * hi_res_factor) / 16
         : (rapid ? cfg->rapid_detent_ticks : cfg->slow_detent_ticks);
@@ -188,8 +212,7 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
     data->detent_unit_remainder = credits % cfg->encoder_trigger_divisor;
 
     if (hi_res_factor > 1) {
-        // With 4 units/3 events, there is no need to artificially stagger
-        // every tick over 32ms. The physical encoder now supplies finer timing.
+        // v3.2 physical HID output: same fine step and remainder as before.
         int32_t first = MIN(total, (cfg->hires_immediate_units * hi_res_factor) / 16);
         immediate_ticks = direction * first;
         data->smooth_remaining += direction * (total - first);
@@ -200,18 +223,18 @@ static int inertia_pressed(struct zmk_behavior_binding *binding,
 
     data->last_detent_ms = now;
     data->direction = direction;
-    has_tail = data->frames_remaining != 0 || data->smooth_remaining != 0;
+    arm_coast = data->fast_intervals >= cfg->coast_min_fast_intervals &&
+                hi_res_factor > 1 && cfg->tail_frames > 0;
     k_spin_unlock(&data->lock, key);
 
-    // Always report physical direction immediately; no artificial input delay.
+    // Retain physical v3.2 wheel output, completely free of acceleration.
     if (immediate_ticks != 0) {
         input_report_rel(dev, INPUT_REL_WHEEL, immediate_ticks, true, K_NO_WAIT);
     }
 
-    if (has_tail) {
-        // Do not continually reset the deadline when encoder events arrive:
-        // that would postpone fine-scroll output until spinning stops.
-        k_work_schedule(&data->tick_work, K_MSEC(cfg->frame_ms));
+    // A fast streak restarts the idle timer; ordinary turns cancel it.
+    if (arm_coast) {
+        k_work_reschedule(&data->tick_work, K_MSEC(cfg->coast_wait_ms));
     } else {
         k_work_cancel_delayable(&data->tick_work);
     }
@@ -246,6 +269,8 @@ static const struct behavior_driver_api inertia_api = {
         .hires_immediate_units = DT_INST_PROP(n, hires_immediate_units),               \
         .hires_chunk_units = DT_INST_PROP(n, hires_chunk_units),                       \
         .encoder_trigger_divisor = DT_INST_PROP(n, encoder_trigger_divisor),           \
+        .coast_wait_ms = DT_INST_PROP(n, coast_wait_ms),                               \
+        .coast_min_fast_intervals = DT_INST_PROP(n, coast_min_fast_intervals),         \
     };                                                                                 \
     BEHAVIOR_DT_INST_DEFINE(n, inertia_init, NULL, &inertia_data_##n,                  \
                            &inertia_cfg_##n, POST_KERNEL,                             \
